@@ -4,6 +4,9 @@ import { ChatMessage, Message } from "@/components/chat/ChatMessage";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { EmptyState } from "@/components/chat/EmptyState";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
+import { useAIChat } from "@/hooks/useAIChat";
+import { useAdmin } from "@/contexts/AdminContext";
+import { toast } from "sonner";
 
 const demoResponses = [
   "I'd be happy to help you with that. As a safe AI assistant, I'm designed to provide accurate, practical information while maintaining clear boundaries. What would you like to know?",
@@ -14,9 +17,26 @@ const demoResponses = [
 ];
 
 const Index = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isTyping, setIsTyping] = useState(false);
+  const { isAdmin } = useAdmin();
+  const { 
+    messages: aiMessages, 
+    isLoading: aiIsLoading, 
+    error: aiError, 
+    sendMessage: sendAIMessage, 
+    isConfigured,
+    clearMessages 
+  } = useAIChat();
+  
+  const [demoMessages, setDemoMessages] = useState<Message[]>([]);
+  const [isDemoTyping, setIsDemoTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Use AI messages if configured, otherwise use demo
+  const useRealAI = isAdmin && isConfigured;
+  const messages = useRealAI 
+    ? aiMessages.map(m => ({ id: m.id, role: m.role, content: m.content }))
+    : demoMessages;
+  const isTyping = useRealAI ? aiIsLoading : isDemoTyping;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -26,27 +46,37 @@ const Index = () => {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  const handleSend = (content: string) => {
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content,
-    };
+  useEffect(() => {
+    if (aiError) {
+      toast.error(aiError);
+    }
+  }, [aiError]);
 
-    setMessages((prev) => [...prev, userMessage]);
-    setIsTyping(true);
-
-    // Simulate AI response
-    setTimeout(() => {
-      const response = demoResponses[Math.floor(Math.random() * demoResponses.length)];
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: response,
+  const handleSend = async (content: string) => {
+    if (useRealAI) {
+      await sendAIMessage(content);
+    } else {
+      // Demo mode
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        role: "user",
+        content,
       };
-      setMessages((prev) => [...prev, assistantMessage]);
-      setIsTyping(false);
-    }, 1200 + Math.random() * 800);
+
+      setDemoMessages((prev) => [...prev, userMessage]);
+      setIsDemoTyping(true);
+
+      setTimeout(() => {
+        const response = demoResponses[Math.floor(Math.random() * demoResponses.length)];
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: response,
+        };
+        setDemoMessages((prev) => [...prev, assistantMessage]);
+        setIsDemoTyping(false);
+      }, 1200 + Math.random() * 800);
+    }
   };
 
   return (
@@ -70,6 +100,11 @@ const Index = () => {
       <footer className="border-t border-border bg-background/80 backdrop-blur-sm px-4 py-4">
         <div className="max-w-3xl mx-auto">
           <ChatInput onSend={handleSend} disabled={isTyping} />
+          {!useRealAI && isAdmin && (
+            <p className="text-xs text-center text-muted-foreground mt-2">
+              Demo mode — Add API key in Settings to enable real AI
+            </p>
+          )}
         </div>
       </footer>
     </div>
