@@ -1,4 +1,6 @@
 import { Shield } from "lucide-react";
+import { AdminBadge } from "@/components/admin/AdminBadge";
+import { AdminSettingsSheet } from "@/components/admin/AdminSettingsSheet";
 
 export const ChatHeader = () => {
   return (
@@ -12,11 +14,13 @@ export const ChatHeader = () => {
           <p className="text-xs text-muted-foreground">Helpful, safe & predictable</p>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
+        <AdminBadge />
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/10 text-accent text-xs font-medium">
           <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse-subtle"></span>
           Online
         </span>
+        <AdminSettingsSheet />
       </div>
     </header>
   );
